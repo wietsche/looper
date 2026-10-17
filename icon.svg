@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Song Looper">
+  <rect width="192" height="192" rx="42" fill="#0d0f12"/>
+  <!-- loop arrow -->
+  <path d="M56 96a40 40 0 0 1 40-40h30" fill="none" stroke="#1db954" stroke-width="12" stroke-linecap="round"/>
+  <path d="M136 96a40 40 0 0 1-40 40H66" fill="none" stroke="#1db954" stroke-width="12" stroke-linecap="round"/>
+  <path d="M118 42l20 14-20 14z" fill="#1db954"/>
+  <path d="M74 150l-20-14 20-14z" fill="#1db954"/>
+</svg>

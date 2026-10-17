@@ -1,0 +1,101 @@
+<!doctype html>
+<!-- Dev harness: runs the real index.html against a fake Spotify API so the
+     loop engine can be exercised without a Premium account or a phone.
+     Serve the project and open /test/mock.html — never deploy this file. -->
+<meta charset="utf-8">
+<title>Looper mock harness</title>
+<script>
+(async function () {
+  // Local-only. This harness plants a fake token in localStorage, which would
+  // clobber a real session if it ever ran on the deployed origin.
+  const host = location.hostname;
+  const local = ['localhost', '127.0.0.1', '[::1]', ''].includes(host) || host.endsWith('.localhost');
+  if (!local) {
+    document.write('<p style="font:16px sans-serif;padding:24px">The mock harness only runs on localhost.</p>');
+    return;
+  }
+
+  const M = window.__mock = {
+    now: () => performance.now(),
+    playing: true,
+    base: 0,            // progress at baseAt
+    baseAt: performance.now(),
+    duration: 240000,
+    seeks: [],
+    pauses: [],
+    plays: [],
+    latency: 120,       // fake network RTT per call
+    progress() {
+      return Math.min(this.duration,
+        Math.round(this.base + (this.playing ? performance.now() - this.baseAt : 0)));
+    },
+    setProgress(ms) { this.base = ms; this.baseAt = performance.now(); },
+  };
+
+  const TRACK = {
+    id: '4cOdK2wGLETKBW3PvgPWqT', uri: 'spotify:track:4cOdK2wGLETKBW3PvgPWqT',
+    name: 'Mock Song', duration_ms: M.duration,
+    artists: [{ name: 'The Harness' }],
+    album: { images: [{ url: '../icon-192.png' }] },
+  };
+
+  const json = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' } });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input.url;
+    if (url.includes('accounts.spotify.com/api/token')) {
+      M.tokenCalls = (M.tokenCalls || 0) + 1;
+      await wait(M.latency);
+      return json({ access_token: 'mock-' + M.tokenCalls, refresh_token: 'mock', expires_in: 3600 });
+    }
+    if (!url.includes('api.spotify.com')) return realFetch(input, init);
+    if (M.force401) { M.force401 -= 1; return new Response('{}', { status: 401 }); }
+    await wait(M.latency / 2);
+    const u = new URL(url);
+    const p = u.pathname.replace('/v1', '');
+    const method = (init.method || 'GET').toUpperCase();
+    let out;
+    if (p === '/me/player' && method === 'GET') {
+      out = json({
+        device: { id: 'mock-device', name: 'Mock Phone', is_active: true },
+        is_playing: M.playing, progress_ms: M.progress(), item: TRACK,
+      });
+    } else if (p === '/me/player/devices') {
+      out = json({ devices: [{ id: 'mock-device', name: 'Mock Phone', is_active: true, is_restricted: false }] });
+    } else if (p === '/me/player/seek') {
+      const pos = Number(u.searchParams.get('position_ms'));
+      M.setProgress(pos);
+      M.seeks.push({ at: Math.round(performance.now()), pos });
+      out = new Response(null, { status: 204 });
+    } else if (p === '/me/player/pause') {
+      M.setProgress(M.progress()); M.playing = false; M.pauses.push(Math.round(performance.now()));
+      out = new Response(null, { status: 204 });
+    } else if (p === '/me/player/play') {
+      M.setProgress(M.progress()); M.playing = true; M.plays.push(Math.round(performance.now()));
+      out = new Response(null, { status: 204 });
+    } else if (p === '/search') {
+      out = json({ tracks: { items: [TRACK] } });
+    } else {
+      out = new Response(null, { status: 204 });
+    }
+    await wait(M.latency / 2);
+    return out;
+  };
+
+  try {
+    localStorage.setItem('clientId', JSON.stringify('mockclientid'));
+    // Seed a token only when there isn't one, so tests can plant an expired
+    // token and have it survive a reload.
+    if (!localStorage.getItem('tok')) {
+      localStorage.setItem('tok', JSON.stringify({ access: 'mock', refresh: 'mock', exp: Date.now() + 3600e3 }));
+    }
+  } catch {}
+
+  const html = await realFetch('../index.html').then((r) => r.text());
+  document.open();
+  document.write(html.replace('<head>', '<head>\n<base href="../">'));
+  document.close();
+})();
+</script>

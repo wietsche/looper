@@ -1,0 +1,11 @@
+{
+  "name": "song-looper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mobile web app to loop a section of a Spotify track via Spotify Connect.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "serve": "node serve.mjs"
+  }
+}
