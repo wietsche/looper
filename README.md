@@ -4,6 +4,8 @@ Phone-first web app for practising a section of a song on loop, using Spotify
 as the audio source. It remote-controls the Spotify app on your phone over
 Spotify Connect — see [spec.md](spec.md) for why that is the only option.
 
+**Live: https://wietsche.github.io/looper/**
+
 Personal use, Development Mode only (max 5 allowlisted accounts), Premium required.
 
 ## Files
@@ -21,12 +23,14 @@ Personal use, Development Mode only (max 5 allowlisted accounts), Premium requir
 
 1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard),
    Web API only. No secret is needed — auth is Authorization Code + PKCE.
-2. Deploy `index.html`, `core.js`, the manifest and icons to an HTTPS host
-   (GitHub Pages works). Spotify will not redirect to plain `http://`.
-3. Add the page's full URL as a Redirect URI, exactly as the setup screen
-   shows it. The app derives it from `location.origin + location.pathname`, so
-   `https://you.github.io/looper/` must be registered verbatim, trailing slash
-   included.
+2. Under that app's settings, add this exact Redirect URI, trailing slash
+   included — the app derives it from `location.origin + location.pathname`:
+
+   ```
+   https://wietsche.github.io/looper/
+   ```
+3. Already deployed: a push to `main` republishes the page within a minute or
+   two. Spotify will not redirect to plain `http://`, so it has to be HTTPS.
 4. Under User Management, add the Spotify account you will log in with.
 5. Open the page on your phone, paste the Client ID, log in.
 
